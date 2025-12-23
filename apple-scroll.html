@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Storix — Apple-style Scroll Page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="apple-scroll.css" rel="stylesheet">
+</head>
+<body>
+<div class="hdr">
+  <div class="brand">Storix</div>
+  <div class="shop"><a href="purchase.html" aria-label="Purchasement">
+    <svg viewBox="0 0 24 24" width="22" height="22">
+      <path fill="currentColor" d="M7 7V6a5 5 0 0110 0v1h2a1 1 0 011 1l-1.2 12a2 2 0 01-2 1.8H8.2a2 2 0 01-2-1.8L5 8a1 1 0 011-1h1zm2 0h6V6a3 3 0 00-6 0v1z"/>
+    </svg>
+  </a></div>
+</div>
+
+<section id="presence" class="scene scene--presence">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Presence Work</div>
+          <div class="desc">Field pilots, operations, data pipelines and monitoring — the groundwork that makes impact possible.</div>
+          <div class="stat">
+            <div class="item"><div class="value">5+</div><div>Pilot sites</div></div>
+            <div class="item"><div class="value">24/7</div><div>Monitoring</div></div>
+            <div class="item"><div class="value">95%+</div><div>Accuracy target</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip"></div>
+          <div class="bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+}</section>
+
+<section class="scene scene--team">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Team Story</div>
+          <div class="desc">Mission, Vision and Values — professional, trustworthy, engineering tone for utilities.</div>
+          <div class="stat">
+            <div class="item"><div class="value">Mission</div><div>Reduce peak-period losses via forecasting and storage.</div></div>
+            <div class="item"><div class="value">Vision</div><div>Efficient, low-carbon energy systems.</div></div>
+            <div class="item"><div class="value">Values</div><div>Reliability • Transparency • Collaboration</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip" style="left:auto; right:24px"></div>
+          <div class="bar" style="width: 260px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene scene--globe">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Peak-period Energy Loss</div>
+          <div class="desc">Explore country-level losses. Drag the globe and switch years to compare.</div>
+          <div class="model-controls">
+            <label for="yearRange2">Year</label>
+            <input id="yearRange2" type="range" min="2019" max="2023" step="1" value="2023">
+            <span id="yearLabel2">2023</span>
+          </div>
+        </div>
+        <div id="globe2" class="globe2">
+          <div id="globeTooltip2" class="globe-tooltip"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="scene scene--feas">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Feasibility</div>
+          <div class="desc">Technical, operational and financial feasibility — ML forecasting, storage optimization and dispatch orchestration.</div>
+          <div class="stat">
+            <div class="item"><div class="value">Tech</div><div>Models, optimization, orchestration</div></div>
+            <div class="item"><div class="value">Ops</div><div>SCADA and scheduling integrations</div></div>
+            <div class="item"><div class="value">ROI</div><div>Loss reduction and peak shaving</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip" style="width:160px;height:100px"></div>
+          <div class="bar" style="width:300px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene scene--impact">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Impact</div>
+          <div class="desc">Less grid stress, lower line losses, reduced emissions, improved customer reliability and cost control.</div>
+          <div class="stat">
+            <div class="item"><div class="value">↓ 12–18%</div><div>Peak loss</div></div>
+            <div class="item"><div class="value">↑ 8–15%</div><div>Storage use</div></div>
+            <div class="item"><div class="value">≤ 5 min</div><div>Response</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip" style="left:auto; right:24px"></div>
+          <div class="bar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene scene--dist">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Distribution</div>
+          <div class="desc">Channels, regions and support — direct utility sales, partners, onboarding and SLAs.</div>
+          <div class="stat">
+            <div class="item"><div class="value">Channels</div><div>Direct + partners</div></div>
+            <div class="item"><div class="value">Regions</div><div>Segmented rollouts</div></div>
+            <div class="item"><div class="value">Support</div><div>Training and SLAs</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip"></div>
+          <div class="bar" style="width:280px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scene scene--prod">
+  <div class="pin">
+    <div class="frame">
+      <div class="content">
+        <div>
+          <div class="title">Purchasement & Product</div>
+          <div class="desc">Offering, procurement and roadmap — platform subscription, compliance and vendor onboarding.</div>
+          <div class="stat">
+            <div class="item"><div class="value">Offering</div><div>Subscription + services</div></div>
+            <div class="item"><div class="value">Procure</div><div>Compliance, onboarding</div></div>
+            <div class="item"><div class="value">Roadmap</div><div>Forecast • Storage • Transport</div></div>
+          </div>
+        </div>
+        <div class="visual">
+          <div class="glow"></div>
+          <div class="chip" style="width:170px;height:110px"></div>
+          <div class="bar" style="width:240px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer">© <span id="year"></span> Storix</div>
+<script>
+document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "globe.gl": "https://esm.sh/globe.gl@2.33.0"
+  }
+}
+</script>
+<script type="module" src="apple-globe.js"></script>
+<script src="apple-scroll.js"></script>
+</body>
+</html>
