@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的个人网站</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="styles.css" rel="stylesheet">
+</head>
+<body>
+<header class="site-header">
+  <div class="container">
+    <h1 class="logo">Conrad</h1>
+    <nav class="nav">
+      <a href="#about">关于我</a>
+      <a href="#projects">项目</a>
+      <a href="#contact">联系</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <div class="container">
+      <h2>你好，我是 Conrad</h2>
+      <p>这是我的个人网站，用来展示作品与记录思考。</p>
+      <div class="cta">
+        <a class="btn" href="#projects">查看项目</a>
+        <button id="themeToggle" class="btn secondary">切换主题</button>
+      </div>
+    </div>
+  </section>
+  <section id="about" class="section">
+    <div class="container">
+      <h3>关于我</h3>
+      <p>我专注于前端与网页体验设计，热爱把想法变成可用的产品。</p>
+    </div>
+  </section>
+  <section id="projects" class="section">
+    <div class="container cards">
+      <article class="card">
+        <h4>作品一</h4>
+        <p>一个简洁快速的静态网站模板，适合个人主页。</p>
+        <a href="#" class="link">了解更多</a>
+      </article>
+      <article class="card">
+        <h4>作品二</h4>
+        <p>交互式数据可视化示例，演示现代前端技术。</p>
+        <a href="#" class="link">了解更多</a>
+      </article>
+      <article class="card">
+        <h4>作品三</h4>
+        <p>实用工具集合，涵盖生产力与效率提升。</p>
+        <a href="#" class="link">了解更多</a>
+      </article>
+    </div>
+  </section>
+  <section id="contact" class="section">
+    <div class="container">
+      <h3>联系</h3>
+      <p>邮箱：<a href="mailto:yourname@example.com">yourname@example.com</a></p>
+      <p>GitHub：<a href="https://github.com/yourname" target="_blank" rel="noopener">github.com/yourname</a></p>
+    </div>
+  </section>
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <small>© <span id="year"></span> Conrad. 保留所有权利。</small>
+  </div>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>
