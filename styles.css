@@ -90,6 +90,77 @@ html, body {
   margin: 0 0 16px;
   font-size: 22px;
 }
+.model-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 16px;
+  color: var(--muted);
+}
+.model-controls input[type="range"] {
+  width: 240px;
+}
+.globe {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: radial-gradient(1200px 520px at 10% 10%, color-mix(in oklab, var(--bg-soft), black 8%), var(--bg));
+  overflow: hidden;
+}
+.globe canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+.globe-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  transform: translate(-50%, -140%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  display: none;
+}
+.brand-wrap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .brand-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+}
+@media (max-width: 600px) {
+  .brand-wrap { grid-template-columns: 1fr }
+}
+.brand-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.storix-mark {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+.swatches { display: flex; gap: 10px; margin-bottom: 10px }
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--c);
+  border: 1px solid color-mix(in oklab, var(--c), black 30%);
+}
 .cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
