@@ -13,9 +13,9 @@ body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 .section h2{margin:0 0 12px}
 .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .cards{align-items:stretch}
-.card{background:#0b0b0b;border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:18px;display:grid;grid-template-rows:auto 160px auto auto;gap:12px;height:100%}
+.card{background:#0b0b0b;border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:18px;display:grid;grid-template-rows:auto 160px 1fr auto;gap:12px;height:100%}
 .card .title{font-weight:800;font-size:20px;color:#BFDBF7;display:flex;align-items:center;gap:8px}
-.card .desc{color:#d2d7dc;line-height:1.6;text-align:justify;text-align-last:left}
+.card .desc{color:#d2d7dc;line-height:1.6;text-align:justify;text-align-last:left;hyphens:auto;overflow-wrap:break-word}
 .card .quote{color:#fff;opacity:.9;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;text-align:justify;text-align-last:left}
 .badge{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);display:grid;place-items:center}
 .media{height:160px;border-radius:12px;background:linear-gradient(135deg,#1a1a1a,#0f0f0f);border:1px solid rgba(255,255,255,.12)}
