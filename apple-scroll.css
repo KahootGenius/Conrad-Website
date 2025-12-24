@@ -124,6 +124,10 @@ body {
 }
 .logo-mark .tagline {
   color: #d2d7dc;
+  max-width: 60ch;
+  font-size: clamp(14px, 2.2vw, 18px);
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 .globe2 {
   position: relative;
