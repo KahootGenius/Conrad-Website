@@ -11,3 +11,15 @@ function update() {
   requestAnimationFrame(update);
 }
 update();
+const logoName = document.querySelector('.scene--logo .logo-name');
+const logoTop = document.querySelector('.scene--logo .logo-top');
+const logoBottom = document.querySelector('.scene--logo .logo-bottom');
+function syncLogoWidth() {
+  if (!logoName || !logoTop || !logoBottom) return;
+  const w = logoName.getBoundingClientRect().width;
+  const px = Math.round(w);
+  logoTop.style.width = px + 'px';
+  logoBottom.style.width = px + 'px';
+}
+window.addEventListener('resize', syncLogoWidth);
+syncLogoWidth();
