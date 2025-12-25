@@ -4,6 +4,9 @@ const container = document.getElementById("globe2");
 const tooltip = document.getElementById("globeTooltip2");
 const yearRange = document.getElementById("yearRange2");
 const yearLabel = document.getElementById("yearLabel2");
+const readoutName = document.getElementById("globeName2");
+const readoutYear = document.getElementById("globeYear2");
+const readoutValue = document.getElementById("globeValue2");
 
 const globeObj = Globe()(container)
   .globeImageUrl("https://unpkg.com/three-globe/example/img/earth-dark.jpg")
@@ -55,7 +58,14 @@ container.addEventListener("mousemove", e => {
 globeObj.onPolygonHover(f => {
   hovered = f;
   applyStyles();
-  if (!f) { tooltip.style.display = "none"; return; }
+  if (!f) { 
+    tooltip.style.display = "none"; 
+    if (readoutName && readoutValue) {
+      readoutName.textContent = "Hover a country";
+      readoutValue.textContent = "–";
+    }
+    return; 
+  }
   tooltip.style.display = "block";
   const name = f.properties.name;
   const series = lossData[name];
@@ -63,11 +73,16 @@ globeObj.onPolygonHover(f => {
   tooltip.innerHTML = `<div><strong>${name}</strong></div><div>Current year ${currentYear}: ${series[currentYear]}</div><div>${rows}</div>`;
   tooltip.style.left = `${lastMouse.x}px`;
   tooltip.style.top = `${lastMouse.y}px`;
+  if (readoutName && readoutValue) {
+    readoutName.textContent = name;
+    readoutValue.textContent = String(series[currentYear]);
+  }
 });
 
 function setYear(y) {
   yearLabel.textContent = String(y);
   currentYear = Number(y);
+  if (readoutYear) readoutYear.textContent = String(y);
   applyStyles();
 }
 setYear(Number(yearRange.value));

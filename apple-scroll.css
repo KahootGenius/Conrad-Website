@@ -161,3 +161,13 @@ body {
   display: flex; align-items: center; gap: 12px; margin-top: 12px; color: #d2d7dc;
 }
 .model-controls input[type="range"] { width: 240px }
+.globe-readout {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.16);
+  color: #d2d7dc;
+}
