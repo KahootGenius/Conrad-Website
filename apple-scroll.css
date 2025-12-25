@@ -164,19 +164,13 @@ body {
   background: linear-gradient(135deg, #0b0b0b, #141414);
   border: 1px solid rgba(255,255,255,0.12);
 }
-.scene--logo .hero-visual {
-  height: calc(100vh - 56px);
-  align-self: stretch;
-  justify-self: end;
-  width: 50vw;
-  border-radius: 0;
-  border: 0;
-  background-image: url('image/pexels-hi-u-nguy-n-1597509210-35344736.jpg');
-  background-size: cover;
-  background-position: right center;
-  background-repeat: no-repeat;
+.hero-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
 }
-.scene--logo .content { align-items: stretch; grid-template-columns: 1fr 1fr }
 .copy {
   color: #d2d7dc;
   line-height: 1.75;
