@@ -122,6 +122,16 @@
     </style>
 </head>
 <body class="p-6 max-w-7xl mx-auto">
+    <div class="sticky top-0 z-10 mb-6 bg-white/80 backdrop-blur border-b border-slate-200 p-4">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="text-xl font-extrabold text-slate-900">Storix</div>
+        <nav class="flex gap-2">
+          <a href="apple-scroll.html" class="px-3 py-1 rounded border border-slate-300 text-slate-800 hover:bg-slate-100">Home</a>
+          <a href="about.html" class="px-3 py-1 rounded border border-slate-300 text-slate-800 hover:bg-slate-100">About</a>
+          <a href="purchase.html" class="px-3 py-1 rounded border border-slate-300 text-slate-800 hover:bg-slate-100">Product Lineup</a>
+        </nav>
+      </div>
+    </div>
 
     <!-- Header -->
     <div class="mb-8 text-center">
@@ -154,7 +164,11 @@
 
             <div>
                 <label class="block text-sm font-medium text-slate-700">Grid Scale (Households)</label>
-                <input type="number" id="gridScaleInput" value="2000000" step="100000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" onchange="updateSimulation()">
+                <div class="flex items-center gap-2">
+                    <input type="range" id="gridScaleInput" min="10000" max="20000000" step="10000" value="2000000" class="mt-1 flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('gridScaleVal').innerText = (this.value/1000000).toFixed(2) + ' M'; updateSimulation()">
+                    <span id="gridScaleVal" class="text-sm font-bold text-slate-700 w-16">2.00 M</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Range: 10k - 20M Households</p>
             </div>
 
             <div>
@@ -782,93 +796,82 @@
                 idealIsoCurrents = tempProfile;
             }
 
-            // 3. Apply Battery Constraints
-            // We now have "idealIsoCurrents" (Total Grid Current).
-            // Convert to Per-Household Power to simulate battery logic.
-            
-            let finalOptCurrents = [];
-            let batterySoc = 0.5 * BATTERY_CAP_KWH; // Start at 50%
-            let batteryState = []; // For debugging if needed
+            // 3. Apply Battery Constraints (Two-Pass for SoC Neutrality)
+            // Pass 1: Run simulation to see if we drain/fill battery net.
+            // Pass 2: Adjust load to force net zero (Energy Neutral).
 
-            for(let i=0; i<24; i++) {
-                const baseP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * results.trans.baseI[i] * 0.95) / 1000;
-                const idealP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * idealIsoCurrents[i] * 0.95) / 1000;
+            function runBatteryLoop(offsetKw = 0) {
+                let currents = [];
+                let soc = 0.5 * BATTERY_CAP_KWH;
                 
-                // Per Household (kW)
-                const baseP_hh = baseP_total / SIM_DATA.scale_transmission;
-                const idealP_hh = idealP_total / SIM_DATA.scale_transmission;
-                
-                let actualP_hh = baseP_hh;
-                
-                // Desired shift: (+ means charge/consume more, - means discharge/consume less)
-                let powerDiff = idealP_hh - baseP_hh;
-                
-                if (powerDiff > 0) {
-                    // We need to INCREASE load (Charge Battery)
-                    // e.g., Night time valley filling
-                    // Max we can charge is limited by Capacity (Space left)
-                    const spaceLeft = BATTERY_CAP_KWH - batterySoc;
-                    const maxCharge = spaceLeft / BATTERY_EFF; // Need to put in X to get X*eff stored? No.
-                    // If we draw X from grid, X*eff goes to battery.
-                    // So max we can Draw = spaceLeft / eff.
+                for(let i=0; i<24; i++) {
+                    const baseP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * results.trans.baseI[i] * 0.95) / 1000;
+                    const idealP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * idealIsoCurrents[i] * 0.95) / 1000;
                     
-                    const actualCharge = Math.min(powerDiff, maxCharge);
-                    batterySoc += actualCharge * BATTERY_EFF;
-                    actualP_hh = baseP_hh + actualCharge;
+                    const baseP_hh = baseP_total / SIM_DATA.scale_transmission;
+                    const idealP_hh = idealP_total / SIM_DATA.scale_transmission;
+                    
+                    // Apply Offset to Ideal (to balance SoC)
+                    // If offset is positive, we demand MORE from grid (Charge more/Discharge less).
+                    let targetP_hh = idealP_hh + offsetKw;
 
-                } else {
-                    // We need to DECREASE load (Discharge Battery)
-                    // e.g., Day time peak shaving
-                    // Max we can discharge is limited by SoC
-                    const dischargeNeeded = -powerDiff; // Positive value
-                    // To reduce grid load by Y, we need battery to provide Y.
-                    // Battery loses Y/eff? No, usually efficiency is round trip.
-                    // Let's say Discharging X kWh from battery provides X*eff to home? 
-                    // Or X stored provides X output? 
-                    // Let's assume standard: Output = Delta. Energy removed from battery = Delta / Eff.
-                    // (So we burn more battery to provide the output).
+                    let actualP_hh = baseP_hh;
+                    let powerDiff = targetP_hh - baseP_hh;
                     
-                    const maxDischarge = batterySoc * BATTERY_EFF; // No wait.
-                    // Available energy to GIVE to grid = SoC * discharge_eff?
-                    // Let's simplify: 
-                    // To provide 'dischargeNeeded' to grid: remove 'dischargeNeeded' from battery (Perfect discharge), 
-                    // but we penalized charge. Or penalize both.
-                    // Let's penalize both: Remove = dischargeNeeded / sqrt(0.95).
-                    // For simple 95% Round Trip: Charge * 0.95, Discharge / 1.0? 
-                    // Let's use: Charge adds P*0.95. Discharge removes P/0.95.
+                    if (powerDiff > 0) {
+                        // Charge
+                        const spaceLeft = BATTERY_CAP_KWH - soc;
+                        const maxCharge = spaceLeft / BATTERY_EFF;
+                        const actualCharge = Math.min(powerDiff, maxCharge);
+                        soc += actualCharge * BATTERY_EFF;
+                        actualP_hh = baseP_hh + actualCharge;
+                    } else {
+                        // Discharge
+                        const dischargeNeeded = -powerDiff; 
+                        const effOneWay = Math.sqrt(BATTERY_EFF);
+                        const maxOutput = soc * effOneWay;
+                        const actualOutput = Math.min(dischargeNeeded, maxOutput);
+                        soc -= actualOutput / effOneWay;
+                        actualP_hh = baseP_hh - actualOutput;
+                    }
                     
-                    const energyToRemove = dischargeNeeded / Math.sqrt(BATTERY_EFF); 
-                    // Wait, let's stick to simple model:
-                    // Charge: Grid gives 100, Battery gets 95.
-                    // Discharge: Battery gives 100, Grid gets 95.
-                    
-                    // Here we want Grid to see "dischargeNeeded" reduction.
-                    // So Battery must provide "dischargeNeeded".
-                    // If Battery provides X, Grid gets X. 
-                    // But internally battery state decreases by X / (efficiency_discharge).
-                    // Let's assume eff is one-way 0.95 for charge, 1.0 discharge for simplicity or split it.
-                    // Let's split: sqrt(0.95) ~ 0.975 each way.
-                    
-                    const effOneWay = Math.sqrt(BATTERY_EFF);
-                    
-                    // Check if we have enough
-                    const maxOutput = batterySoc * effOneWay;
-                    
-                    const actualOutput = Math.min(dischargeNeeded, maxOutput);
-                    
-                    // Update Battery
-                    batterySoc -= actualOutput / effOneWay;
-                    
-                    actualP_hh = baseP_hh - actualOutput;
+                    const actualP_total = actualP_hh * SIM_DATA.scale_transmission;
+                    const actualI_total = calculateCurrent(actualP_total, pTrans.voltage_kv, 'AC');
+                    currents.push(actualI_total);
                 }
-                
-                // Convert back to Total Grid Current
-                const actualP_total = actualP_hh * SIM_DATA.scale_transmission;
-                const actualI_total = calculateCurrent(actualP_total, pTrans.voltage_kv, 'AC');
-                
-                finalOptCurrents.push(actualI_total);
-                batteryState.push(batterySoc);
+                return { currents, finalSoc: soc };
             }
+
+            // Pass 1
+            let run1 = runBatteryLoop(0);
+            let startSoc = 0.5 * BATTERY_CAP_KWH;
+            let netDrain = startSoc - run1.finalSoc; // Positive = Drained
+            
+            // Pass 2: Correction
+            // If we drained 10kWh, we need to add 10kWh load to grid over 24h.
+            // Correction Load = NetDrain / 24h.
+            // Note: This assumes linear response, which is roughly true unless we hit edges.
+            // To be precise, we need to account for efficiency.
+            // If we drained X from battery, we saved X * effOneWay? No.
+            // Let's just add the raw energy back.
+            // If NetDrain > 0, we used battery. We need to Demand More from Grid.
+            // How much? NetDrain is Stored Energy. 
+            // To replace it, we need NetDrain / BATTERY_EFF from grid?
+            // Let's approximate: correction = NetDrain / 24.
+            
+            let correctionKw = netDrain / 24;
+            // Apply correction
+            let run2 = runBatteryLoop(correctionKw);
+            
+            // If still not balanced (due to clamping), maybe run 3?
+            // Let's stick to Pass 2 for now, usually enough.
+            let finalOptCurrents = run2.currents;
+            
+            // Update Metrics using Run 2
+            let finalSoc = run2.finalSoc;
+            let finalNetDrain = startSoc - finalSoc;
+            const gridEnergyCorrectionPerHH = finalNetDrain > 0 ? (finalNetDrain / BATTERY_EFF) : 0;
+            const totalCorrectionKwh = gridEnergyCorrectionPerHH * SIM_DATA.scale_transmission;
 
             // 3. Fill Optimization Results
             for(let i=0; i<24; i++) {
@@ -989,7 +992,10 @@
                  return acc + (Math.sqrt(3) * pTrans.voltage_kv * 1000 * I * 0.95) / 1000;
             }, 0);
             
-            const diffKwh = totalOptKwhCalc - totalBaseEnergy;
+            // Apply Correction for Net Battery Usage (Remaining after Pass 2)
+            const adjustedTotalOptKwh = totalOptKwhCalc + totalCorrectionKwh;
+            
+            const diffKwh = adjustedTotalOptKwh - totalBaseEnergy;
             const pctDiff = (diffKwh / totalBaseEnergy) * 100;
 
             document.getElementById('metricCurrentRed').innerText = `${currentRed.toFixed(1)} A`;
@@ -1007,12 +1013,17 @@
             };
 
             document.getElementById('valBaseEnergy').innerText = fmt(totalBaseEnergy);
-            document.getElementById('valOptEnergy').innerText = fmt(totalOptKwhCalc);
+            document.getElementById('valOptEnergy').innerText = fmt(adjustedTotalOptKwh);
             
             // Update Household Count Display
             if(document.getElementById('householdCountDisplay')) {
-                document.getElementById('householdCountDisplay').innerText = SIM_DATA.scale_transmission.toLocaleString();
+                const num = SIM_DATA.scale_transmission;
+                const fmtNum = num > 1e6 ? (num/1e6).toFixed(2) + ' M' : (num/1e3).toFixed(0) + ' k';
+                document.getElementById('householdCountDisplay').innerText = fmtNum;
             }
+            
+            // Update viz
+            document.getElementById('vizHouseCount').innerText = `${SIM_DATA.scale_transmission > 1e6 ? (SIM_DATA.scale_transmission/1e6).toFixed(2)+' M' : (SIM_DATA.scale_transmission/1e3).toFixed(0)+' k'} Users`;
         }
 
         function updateChartData(chart, dataBase, dataOpt) {
