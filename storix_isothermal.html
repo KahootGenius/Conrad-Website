@@ -174,10 +174,14 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700">Battery Capacity (kWh)</label>
                 <div class="flex items-center gap-2">
-                    <input type="range" id="batteryCapInput" min="5" max="100" step="1" value="15" class="mt-1 flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('batteryCapVal').innerText = this.value + ' kWh'; updateSimulation()">
+                    <input type="range" id="batteryCapInput" min="5" max="100" step="0.5" value="15" class="mt-1 flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('batteryCapVal').innerText = this.value + ' kWh'; updateSimulation()">
                     <span id="batteryCapVal" class="text-sm font-bold text-slate-700 w-16">15 kWh</span>
                 </div>
                 <p class="text-xs text-slate-500 mt-1">Per household. 95% efficiency.</p>
+                <div class="mt-2 flex items-center gap-2">
+                    <button onclick="findOptimalBatteryCapacity()" class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 font-semibold">Find Optimal Size</button>
+                    <span id="optimalCapVal" class="text-sm text-slate-700"></span>
+                </div>
             </div>
 
             <div class="md:col-span-4">
@@ -995,8 +999,10 @@
             // Apply Correction for Net Battery Usage (Remaining after Pass 2)
             const adjustedTotalOptKwh = totalOptKwhCalc + totalCorrectionKwh;
             
-            const diffKwh = adjustedTotalOptKwh - totalBaseEnergy;
-            const pctDiff = (diffKwh / totalBaseEnergy) * 100;
+            const baseTotalGenKwh = totalBaseEnergy + (lossBase / 1000);
+            const optTotalGenKwh = adjustedTotalOptKwh + (lossOpt / 1000);
+            const diffKwh = optTotalGenKwh - baseTotalGenKwh;
+            const pctDiff = (diffKwh / baseTotalGenKwh) * 100;
 
             document.getElementById('metricCurrentRed').innerText = `${currentRed.toFixed(1)} A`;
             document.getElementById('metricTempRed').innerText = `${tempRed.toFixed(1)} °C`;
@@ -1012,8 +1018,8 @@
                 return num.toFixed(0);
             };
 
-            document.getElementById('valBaseEnergy').innerText = fmt(totalBaseEnergy);
-            document.getElementById('valOptEnergy').innerText = fmt(adjustedTotalOptKwh);
+            document.getElementById('valBaseEnergy').innerText = fmt(baseTotalGenKwh);
+            document.getElementById('valOptEnergy').innerText = fmt(optTotalGenKwh);
             
             // Update Household Count Display
             if(document.getElementById('householdCountDisplay')) {
@@ -1030,6 +1036,126 @@
             chart.data.datasets[0].data = dataBase;
             chart.data.datasets[1].data = dataOpt;
             chart.update();
+        }
+
+        function computeNetSavingsForCap(cap) {
+            const envFallback = { ambientTemp: 25, windSpeed: 0.61, solarRadiation: 500 };
+            const pTrans = SIM_DATA.line_params.transmission;
+            const pDist = SIM_DATA.line_params.distribution;
+            const baseLoadTrans = SIM_DATA.baseline_household_kw.map(kw => kw * SIM_DATA.scale_transmission);
+            const baseLoadDist = SIM_DATA.baseline_household_kw.map(kw => kw * SIM_DATA.scale_distribution);
+            const resultsLocal = { trans: { baseI: [], baseT: [] }, dist: { baseI: [], baseT: [] } };
+            let totalBaseEnergy = 0;
+            for (let i = 0; i < 24; i++) {
+                const I_total_base = calculateCurrent(baseLoadTrans[i], pTrans.voltage_kv, 'AC');
+                const I_sub_base = I_total_base / pTrans.num_bundle;
+                resultsLocal.trans.baseI.push(I_total_base);
+                const Tc_base = solveTemperature(I_sub_base, pTrans.resistance_dc_20_per_km_single, pTrans.diameter_mm, { emissivity: pTrans.emissivity, absorptivity: pTrans.absorptivity, material: 'Al' }, envFallback, i, -3);
+                resultsLocal.trans.baseT.push(Tc_base);
+                const I_base_dist = calculateCurrent(baseLoadDist[i], pDist.voltage_kv, 'AC');
+                resultsLocal.dist.baseI.push(I_base_dist);
+                const Tc_base_dist = solveTemperature(I_base_dist, pDist.resistance_dc_20_per_km, pDist.diameter_mm, { emissivity: pDist.emissivity, absorptivity: pDist.absorptivity, material: 'Al' }, envFallback, i);
+                resultsLocal.dist.baseT.push(Tc_base_dist);
+                totalBaseEnergy += baseLoadTrans[i];
+            }
+            const BATTERY_CAP_KWH = cap;
+            const BATTERY_EFF = 0.95;
+            let minT = -50, maxT = 150, targetT = 25;
+            let idealIsoCurrents = [];
+            for (let iter = 0; iter < 20; iter++) {
+                targetT = (minT + maxT) / 2;
+                let currentSumPower = 0;
+                let tempProfile = [];
+                for (let i = 0; i < 24; i++) {
+                    const I_sub_req = calculateCurrentForTargetTemp(targetT, pTrans.resistance_dc_20_per_km_single, pTrans.diameter_mm, { emissivity: pTrans.emissivity, absorptivity: pTrans.absorptivity, material: 'Al' }, envFallback, i, -3);
+                    const I_total_req = I_sub_req * pTrans.num_bundle;
+                    tempProfile.push(I_total_req);
+                    const P_req = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * I_total_req * 0.95) / 1000;
+                    currentSumPower += P_req;
+                }
+                if (currentSumPower > totalBaseEnergy) maxT = targetT; else minT = targetT;
+                idealIsoCurrents = tempProfile;
+            }
+            function runBatteryLoopLocal(offsetKw) {
+                let currents = [];
+                let soc = 0.5 * BATTERY_CAP_KWH;
+                for (let i = 0; i < 24; i++) {
+                    const baseP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * resultsLocal.trans.baseI[i] * 0.95) / 1000;
+                    const idealP_total = (Math.sqrt(3) * pTrans.voltage_kv * 1000 * idealIsoCurrents[i] * 0.95) / 1000;
+                    const baseP_hh = baseP_total / SIM_DATA.scale_transmission;
+                    const idealP_hh = idealP_total / SIM_DATA.scale_transmission;
+                    const targetP_hh = idealP_hh + offsetKw;
+                    let actualP_hh = baseP_hh;
+                    const powerDiff = targetP_hh - baseP_hh;
+                    if (powerDiff > 0) {
+                        const spaceLeft = BATTERY_CAP_KWH - soc;
+                        const maxCharge = spaceLeft / BATTERY_EFF;
+                        const actualCharge = Math.min(powerDiff, maxCharge);
+                        soc += actualCharge * BATTERY_EFF;
+                        actualP_hh = baseP_hh + actualCharge;
+                    } else {
+                        const dischargeNeeded = -powerDiff;
+                        const effOneWay = Math.sqrt(BATTERY_EFF);
+                        const maxOutput = soc * effOneWay;
+                        const actualOutput = Math.min(dischargeNeeded, maxOutput);
+                        soc -= actualOutput / effOneWay;
+                        actualP_hh = baseP_hh - actualOutput;
+                    }
+                    const actualP_total = actualP_hh * SIM_DATA.scale_transmission;
+                    const actualI_total = calculateCurrent(actualP_total, pTrans.voltage_kv, 'AC');
+                    currents.push(actualI_total);
+                }
+                return { currents, finalSoc: soc };
+            }
+            const run1 = runBatteryLoopLocal(0);
+            const startSoc = 0.5 * BATTERY_CAP_KWH;
+            const netDrain = startSoc - run1.finalSoc;
+            const correctionKw = netDrain / 24;
+            const run2 = runBatteryLoopLocal(correctionKw);
+            const finalOptCurrents = run2.currents;
+            const finalSoc = run2.finalSoc;
+            const finalNetDrain = startSoc - finalSoc;
+            const gridEnergyCorrectionPerHH = finalNetDrain > 0 ? (finalNetDrain / BATTERY_EFF) : 0;
+            const totalCorrectionKwh = gridEnergyCorrectionPerHH * SIM_DATA.scale_transmission;
+            let lossTransBaseTotal = 0, lossTransOptTotal = 0, lossDistBaseTotal = 0, lossDistOptTotal = 0;
+            for (let i = 0; i < 24; i++) {
+                const R_single_base = calculateResistance(pTrans.resistance_dc_20_per_km_single, resultsLocal.trans.baseT[i], 'Al');
+                const I_sub_base = resultsLocal.trans.baseI[i] / pTrans.num_bundle;
+                const I_sub_opt = finalOptCurrents[i] / pTrans.num_bundle;
+                const Tc_opt = solveTemperature(I_sub_opt, pTrans.resistance_dc_20_per_km_single, pTrans.diameter_mm, { emissivity: pTrans.emissivity, absorptivity: pTrans.absorptivity, material: 'Al' }, envFallback, i, -3);
+                const R_single_opt = calculateResistance(pTrans.resistance_dc_20_per_km_single, Tc_opt, 'Al');
+                lossTransBaseTotal += 3 * pTrans.num_bundle * Math.pow(I_sub_base, 2) * R_single_base * (parseFloat(document.getElementById('transLenSlider').value) || 1000);
+                lossTransOptTotal += 3 * pTrans.num_bundle * Math.pow(I_sub_opt, 2) * R_single_opt * (parseFloat(document.getElementById('transLenSlider').value) || 1000);
+                const R_dist_base = calculateResistance(pDist.resistance_dc_20_per_km, resultsLocal.dist.baseT[i], 'Al');
+                const ratio = finalOptCurrents[i] / resultsLocal.trans.baseI[i];
+                const I_dist_opt = resultsLocal.dist.baseI[i] * (isNaN(ratio) ? 1 : ratio);
+                const Tc_dist_opt = solveTemperature(I_dist_opt, pDist.resistance_dc_20_per_km, pDist.diameter_mm, { emissivity: pDist.emissivity, absorptivity: pDist.absorptivity, material: 'Al' }, envFallback, i);
+                const R_dist_opt = calculateResistance(pDist.resistance_dc_20_per_km, Tc_dist_opt, 'Al');
+                lossDistBaseTotal += 3 * Math.pow(resultsLocal.dist.baseI[i], 2) * R_dist_base * (parseFloat(document.getElementById('distLenSlider').value) || 20);
+                lossDistOptTotal += 3 * Math.pow(I_dist_opt, 2) * R_dist_opt * (parseFloat(document.getElementById('distLenSlider').value) || 20);
+            }
+            const savingsKwh = (lossTransBaseTotal + lossDistBaseTotal - (lossTransOptTotal + lossDistOptTotal)) / 1000;
+            const totalOptKwhCalc = finalOptCurrents.reduce((acc, I) => acc + (Math.sqrt(3) * pTrans.voltage_kv * 1000 * I * 0.95) / 1000, 0);
+            const adjustedTotalOptKwh = totalOptKwhCalc + totalCorrectionKwh;
+            const diffKwh = adjustedTotalOptKwh - totalBaseEnergy;
+            const batteryPenalty = diffKwh > 0 ? diffKwh : 0;
+            const netSaving = savingsKwh - batteryPenalty;
+            return { netSaving };
+        }
+
+        function findOptimalBatteryCapacity() {
+            let bestCap = 5;
+            let bestNet = -1e9;
+            for (let c = 5; c <= 50; c += 0.5) {
+                const res = computeNetSavingsForCap(parseFloat((Math.round(c*2)/2).toFixed(1)));
+                if (res.netSaving > bestNet) { bestNet = res.netSaving; bestCap = parseFloat((Math.round(c*2)/2).toFixed(1)); }
+            }
+            const snapped = parseFloat((Math.round(bestCap*2)/2).toFixed(1));
+            const resFinal = computeNetSavingsForCap(snapped);
+            document.getElementById('batteryCapInput').value = snapped;
+            document.getElementById('batteryCapVal').innerText = snapped + ' kWh';
+            document.getElementById('optimalCapVal').innerText = 'Optimal ' + snapped + ' kWh, net saving ' + resFinal.netSaving.toFixed(0) + ' kWh';
+            updateSimulation();
         }
 
         // Initialize
